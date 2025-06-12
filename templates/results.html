@@ -1,0 +1,44 @@
+<div id="results-content">
+  <a href="/" class="back-link">← New Search</a>
+  {% if error %}
+    <h1>Error</h1>
+    <div class="card error-card"><p>{{ error }}</p></div>
+  {% else %}
+    <h1>Results for {{ company_name }} ({{ ticker }})</h1>
+    <div class="main-grid">
+      <div class="card full-width-card">
+        <div class="plot-container">
+          {{ plot_html|safe }}
+        </div>
+      </div>
+      <div class="details-grid">
+        <div class="card">
+          <h2>Last 10 Closing Prices</h2>
+          <!-- same as before -->
+        </div>
+        <div class="card">
+          <h2>Latest News for {{ company_name }}</h2>
+          <ul class="news-list">
+            {% for art in stock_news %}
+              <li><a href="{{ art.link }}" target="_blank">{{ art.title }}</a></li>
+            {% else %}
+              <li>No recent news for this stock.</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card">
+          <h2>Sector</h2>
+          <p class="index-name">{{ index_name }}</p>
+          <h2>News for {{ index_name }}</h2>
+          <ul class="news-list">
+            {% for art in index_news %}
+              <li><a href="{{ art.link }}" target="_blank">{{ art.title }}</a></li>
+            {% else %}
+              <li>No sector news found.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>

@@ -1,0 +1,12 @@
+Flask
+yfinance
+pandas
+numpy
+scikit-learn
+requests
+tensorflow
+keras
+plotly
+selenium
+webdriver-manager
+beautifulsoup4

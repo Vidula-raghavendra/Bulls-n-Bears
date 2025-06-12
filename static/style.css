@@ -1,0 +1,39 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f0f2f5;
+    color: #1c1e21;
+    margin: 0;
+    padding: 20px;
+}
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+h1 { font-size: 2em; color: #0052cc; margin-bottom: 10px; }
+h2 { font-size: 1.4em; color: #333; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 8px; }
+form { display: flex; gap: 10px; margin-bottom: 20px; }
+input[type="text"] { flex-grow: 1; padding: 12px; font-size: 1em; border: 1px solid #ddd; border-radius: 6px; }
+button { padding: 12px 20px; font-size: 1em; font-weight: bold; color: #fff; background-color: #0052cc; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
+button:hover { background-color: #003d99; }
+.back-link { display: inline-block; margin-bottom: 20px; color: #0052cc; text-decoration: none; font-weight: bold; }
+.main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+.card { background: #fdfdfd; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; }
+.full-width-card { grid-column: 1 / 2; }
+.details-grid { grid-column: 2 / 3; display: flex; flex-direction: column; gap: 20px; }
+.plot-container { width: 100%; min-height: 500px; }
+.plot-error { color: #dc3545; font-weight: bold; padding: 20px; text-align: center; background-color: #ffebe6; border-radius: 8px; }
+.price-table { width: 100%; border-collapse: collapse; }
+.price-table th, .price-table td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
+.price-table th { font-weight: bold; }
+.news-list { list-style-type: none; padding: 0; margin: 0; }
+.news-list li { padding: 8px 0; border-bottom: 1px solid #eee; font-size: 0.9em; }
+.news-list li:last-child { border-bottom: none; }
+.index-name { font-size: 1.1em; font-weight: bold; color: #0052cc; margin-bottom: 10px; }
+.error-message { color: #dc3545; font-weight: bold; margin-top: 15px; }
+.error-card { background-color: #ffebe6; border-color: #dc3545; color: #58151c; }
+@media (max-width: 992px) { .main-grid { grid-template-columns: 1fr; } }
