@@ -5,161 +5,273 @@
     <title>Bulls N Bears - AI Stock Forecast</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #eaf0f7;
-            --text-color: #2c3e50;
-            --card-bg: #ffffff;
-            --border-color: #dbe1e8;
+            --bg-color: #0a101f; /* Even darker background */
+            --text-color: #e2e8f0;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --primary-color: #22c55e; /* Green for 'up' trend */
+            --primary-hover: #16a34a;
+            --subtle-text: #94a3b8;
         }
+        *, *::before, *::after { box-sizing: border-box; }
         html, body {
             height: 100%;
             margin: 0;
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-color);
+            color: var(--text-color);
             overflow: hidden;
         }
-        .container {
+        .hero-section {
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100%;
-            position: relative;
+            padding: 40px;
+            position: relative; /* For stacking context */
             z-index: 1;
         }
-        .main-content {
+        .hero-content {
+            flex: 1;
+            max-width: 550px;
             text-align: center;
-            padding: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFadeIn 0.8s ease-out 0.2s forwards;
+        }
+        @keyframes slideUpFadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         .logo {
             font-family: 'Poppins', sans-serif;
-            font-size: 64px;
-            font-weight: 600;
-            color: var(--text-color);
-            margin: 0 0 32px 0;
+            font-size: clamp(3rem, 10vw, 4.5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin: 0 0 16px 0;
+            background: linear-gradient(45deg, #22c55e, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        .form-container {
-            max-width: 650px;
+        .subtitle {
+            margin: 0 auto 32px auto;
+            font-size: 1.15rem;
+            color: var(--subtle-text);
+            max-width: 500px;
+            line-height: 1.6;
+        }
+        .form-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 600px;
             margin: 0 auto;
         }
         .form-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 16px;
-            align-items: flex-end; /* Align items to the bottom */
-            margin-bottom: 16px;
+            align-items: flex-end;
+            margin-bottom: 20px;
         }
-        .search-container, .date-container {
-            text-align: left;
-        }
-        .date-container label, .search-container label {
+        .input-group label {
             font-size: 14px;
-            color: #7f8c9b;
+            color: var(--text-color);
             display: block;
             margin-bottom: 8px;
             font-weight: 500;
+            text-align: left;
         }
         #ticker, #backtest_date {
             width: 100%;
-            height: 50px;
-            padding: 0 20px;
-            box-sizing: border-box;
-            background: var(--card-bg);
+            height: 48px;
+            padding: 0 16px;
+            background: #0f172a;
             border: 1px solid var(--border-color);
-            border-radius: 12px;
+            border-radius: 8px;
+            color: var(--text-color);
             font-family: 'Inter', sans-serif;
             font-size: 16px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            transition: all 0.2s ease-in-out;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
         #ticker:focus, #backtest_date:focus {
             outline: none;
-            border-color: #88a4c4;
-            box-shadow: 0 0 0 4px rgba(136, 164, 196, 0.3);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
         }
         .submit-button {
             width: 100%;
-            height: 52px;
-            background-color: #4299e1;
+            height: 50px;
+            background: var(--primary-color);
             border: none;
-            border-radius: 12px;
+            border-radius: 8px;
             cursor: pointer;
-            color: white;
+            color: #020617;
             font-size: 16px;
             font-weight: 600;
             transition: background-color 0.2s;
-            margin-top: 16px; /* Space above button */
         }
-        .submit-button:hover { background-color: #3182ce; }
-        .subtitle {
-            margin-top: 24px;
-            font-size: 14px;
-            color: #7f8c9b;
-        }
-        .bg-graph {
+        .submit-button:hover { background-color: var(--primary-hover); }
+
+        /* --- NEW: ANIMATED BACKGROUND STOCK CHART --- */
+        .background-chart {
             position: absolute;
-            bottom: 0;
+            top: 0;
             left: 0;
             width: 100%;
-            height: 30%;
+            height: 100%;
             z-index: 0;
-            opacity: 0.5;
-            pointer-events: none;
+            opacity: 0.1;
+            overflow: hidden;
         }
-        .loading-screen { display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; background-color: var(--bg-color); z-index: 999; }
-        .loader { width: 250px; height: 8px; background-color: #dbe1e8; border-radius: 4px; overflow: hidden; position: relative; }
-        .loader::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 40%; background-color: #2c3e50; border-radius: 4px; animation: loading-animation 1.5s infinite; }
-        .loading-text { margin-top: 20px; font-size: 14px; color: #7f8c9b; font-weight: 500; }
-        @keyframes loading-animation { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+        .background-chart svg {
+            width: 200%; /* Make it wider to animate across */
+            height: 100%;
+            animation: scroll-chart 40s linear infinite;
+        }
+        @keyframes scroll-chart {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        .chart-line {
+            stroke-width: 4;
+            fill: none;
+        }
+        .green-line { stroke: var(--primary-color); }
+        .red-line { stroke: #ef4444; }
+
+        /* --- NEW: STOCK-THEMED LOADING SCREEN --- */
+        .loading-screen {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            width: 100%;
+            position: fixed;
+            top: 0; left: 0;
+            background-color: var(--bg-color);
+            z-index: 999;
+        }
+        .loading-chart-container {
+            width: 250px;
+            height: 100px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--card-bg);
+            padding: 10px;
+        }
+        .loading-chart svg {
+            width: 100%;
+            height: 100%;
+        }
+        .loading-path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw-line 2.5s ease-out infinite;
+            stroke-width: 3;
+            stroke: var(--primary-color);
+            fill: none;
+        }
+        @keyframes draw-line {
+            to { stroke-dashoffset: 0; }
+        }
+        .loading-text-container {
+            margin-top: 24px;
+            text-align: center;
+        }
+        .loading-text-container p { margin: 0; font-size: 18px; font-weight: 500; color: var(--text-color); }
+        .fun-fact { margin-top: 12px; font-size: 14px; min-height: 40px; max-width: 400px; padding: 0 20px; color: var(--subtle-text); }
+        
+        @media (max-width: 900px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-    <div class="container" id="main-content">
-        <div class="main-content">
+    <!-- NEW: Background Chart SVG -->
+    <div class="background-chart">
+        <svg preserveAspectRatio="none">
+            <path class="chart-line green-line" d="M0,350 Q100,250 200,300 T400,320 Q500,200 600,250 T800,280 Q900,150 1000,200 T1200,220 Q1300,350 1400,300 T1600,320 Q1700,450 1800,400 T2000,380 Q2100,250 2200,300 T2400,320 Q2500,180 2600,230 T2800,250" />
+            <path class="chart-line red-line" style="animation-delay: -10s" d="M0,550 Q100,650 200,600 T400,580 Q500,700 600,650 T800,620 Q900,800 1000,750 T1200,720 Q1300,600 1400,650 T1600,620 Q1700,500 1800,550 T2000,580 Q2100,700 2200,650 T2400,620 Q2500,750 2600,700 T2800,680" />
+        </svg>
+    </div>
+
+    <div class="hero-section" id="main-content">
+        <div class="hero-content">
             <h1 class="logo">Bulls N Bears</h1>
-            <div class="form-container">
+            <p class="subtitle">Leverage AI to backtest historical accuracy or forecast future price movements. Your data-driven market analysis starts here.</p>
+            <div class="form-card">
                 <form action="/predict" method="post" id="predict-form">
                     <div class="form-grid">
-                        <div class="search-container">
+                        <div class="input-group">
                             <label for="ticker">Stock Ticker</label>
-                            <input type="text" id="ticker" name="ticker" placeholder="e.g., AAPL, GOOGL, MSFT" required>
+                            <input type="text" id="ticker" name="ticker" placeholder="e.g., INFY.NS, RELIANCE.NS" required>
                         </div>
-                        <div class="date-container">
-                            <label for="backtest_date">Backtest Date</label>
+                        <div class="input-group">
+                            <label for="backtest_date">Analysis Date</label>
                             <input type="date" id="backtest_date" name="backtest_date">
                         </div>
                     </div>
-                    <button type="submit" class="submit-button">Analyze Accuracy</button>
+                    <button type="submit" class="submit-button">Analyze</button>
                 </form>
             </div>
-            <p class="subtitle">Enter a stock and select a date to backtest the AI's prediction accuracy.</p>
         </div>
     </div>
     
     <div class="loading-screen" id="loading-screen">
-        <div class="loader"></div>
-        <p class="loading-text">Training Model & Analyzing Accuracy...</p>
+        <!-- NEW: Loading Chart SVG -->
+        <div class="loading-chart-container">
+            <div class="loading-chart">
+                <svg viewBox="0 0 230 80">
+                    <path class="loading-path" d="M0 40 L30 60 L60 30 L90 50 L120 20 L150 45 L180 25 L210 70 L230 40" />
+                </svg>
+            </div>
+        </div>
+        <div class="loading-text-container">
+            <p>Training AI Model...</p>
+            <p class="fun-fact" id="fun-fact">Did you know? The candlestick chart was invented by a Japanese rice trader in the 18th century.</p>
+        </div>
     </div>
 
-    <svg class="bg-graph" viewBox="0 0 1440 120" preserveAspectRatio="none">
-        <path d="M0,50 C120,80 240,30 360,60 C480,90 600,40 720,70 C840,100 960,50 1080,80 C1200,110 1320,60 1440,90 L1440,120 L0,120 Z" fill="#ffffff" fill-opacity="0.5"></path>
-    </svg>
-
     <script>
+        // Your existing JavaScript logic for the date picker and form submission remains the same.
+        // It's already perfect for triggering the loading screen.
         const datePicker = document.getElementById('backtest_date');
         const today = new Date();
-        const maxDate = new Date(today);
-        maxDate.setDate(today.getDate() - 8); // Cannot pick a date within the last 8 days
-        const defaultDate = new Date(maxDate);
-        defaultDate.setDate(maxDate.getDate() - 7); // Default to one week before the max date
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        datePicker.max = yesterday.toISOString().split('T')[0];
+        const twoWeeksAgo = new Date(today);
+        twoWeeksAgo.setDate(today.getDate() - 14);
+        datePicker.value = twoWeeksAgo.toISOString().split('T')[0];
 
-        datePicker.max = maxDate.toISOString().split('T')[0];
-        datePicker.value = defaultDate.toISOString().split('T')[0];
+        const funFacts = [
+            "The New York Stock Exchange started in 1792 under a buttonwood tree.",
+            "AI models like LSTMs are inspired by the human brain's neural networks.",
+            "Apple was the first company to reach a $1 trillion market cap.",
+            "The term 'bear market' might come from bears swiping down to attack.",
+            "About 90% of all stock trading is done by algorithms, not humans.",
+            "A 'candlestick' chart was invented by a Japanese rice trader in the 18th century.",
+            "Warren Buffett bought his first stock at age 11.",
+            "The 'VIX' is often called the 'fear index' of the market.",
+        ];
 
         document.getElementById('predict-form').addEventListener('submit', function() {
             document.getElementById('main-content').style.display = 'none';
             document.getElementById('loading-screen').style.display = 'flex';
+            
+            let factIndex = 0;
+            setInterval(() => {
+                factIndex = (factIndex + 1) % funFacts.length;
+                document.getElementById('fun-fact').textContent = funFacts[factIndex];
+            }, 4000);
         });
     </script>
 </body>

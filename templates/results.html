@@ -6,34 +6,125 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-color: #eaf0f7; --text-color: #2c3e50; --card-bg: #ffffff; --border-color: #dbe1e8; --heading-color: #1a202c; --subtle-text: #7f8c9b; --link-color: #4299e1; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-color); }
+        /* --- NEW DARK THEME STYLES --- */
+        :root {
+            --bg-color: #0f172a; /* Dark blue-slate background */
+            --text-color: #e2e8f0;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --heading-color: #f8fafc; /* Brighter heading text */
+            --subtle-text: #94a3b8;
+            --primary-color: #22c55e; /* Green accent */
+            --primary-hover: #16a34a;
+            --link-color: #38bdf8; /* Light blue for links */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            opacity: 0;
+            animation: fadeIn 0.5s ease-in-out forwards;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .header {
+            background-color: var(--card-bg);
+            padding: 16px 40px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .header .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(45deg, #22c55e, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header .back-link {
+            background-color: var(--primary-color);
+            color: #020617;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+        .header .back-link:hover { background-color: var(--primary-hover); }
+        
         .container { max-width: 1400px; margin: 40px auto; padding: 0 40px; }
-        .error-card { background-color: var(--card-bg); border-radius: 16px; border: 1px solid var(--border-color); padding: 60px 40px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); text-align: center; max-width: 800px; margin: 0 auto; }
-        .error-card h2 { font-family: 'Poppins', sans-serif; font-size: 24px; font-weight: 600; color: var(--heading-color); margin: 0 0 12px 0; }
-        .error-card p { font-size: 16px; color: var(--subtle-text); margin: 0 0 32px 0; }
-        .error-card a { font-weight: 600; color: var(--link-color); text-decoration: none; font-size: 16px; }
+        .error-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .error-card h2 { font-size: 24px; color: var(--heading-color); }
+        .error-card p { color: var(--subtle-text); }
+        .error-card a { color: var(--link-color); }
+
         .results-grid { display: grid; gap: 24px; grid-template-columns: 2.5fr 1fr; grid-template-areas: "chart side" "comparison side"; }
-        .card { background-color: var(--card-bg); border-radius: 16px; border: 1px solid var(--border-color); padding: 24px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
-        .card h3 { font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 600; margin: 0 0 16px 0; color: var(--heading-color); }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            transition: border-color 0.2s ease-out;
+        }
+        .card:hover { border-color: #475569; }
+        .card h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0 0 20px 0;
+            color: var(--heading-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
         .chart-card { grid-area: chart; }
         .comparison-card { grid-area: comparison; }
         .side-panel { grid-area: side; display: flex; flex-direction: column; gap: 24px; }
+        
         .accuracy-metrics { display: flex; justify-content: space-around; text-align: center; }
-        .metric h4 { margin: 0 0 4px 0; color: var(--subtle-text); font-size: 14px; font-weight: 500; }
-        .metric p { margin: 0; font-size: 24px; font-weight: 600; color: var(--heading-color); }
+        .metric h4 { margin: 0 0 8px 0; color: var(--subtle-text); font-size: 14px; font-weight: 500; text-transform: uppercase; }
+        .metric p { margin: 0; font-family: 'Poppins'; font-size: 28px; font-weight: 600; color: var(--heading-color); }
+        .metric p.mape { color: var(--primary-color); }
+
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td { text-align: left; padding: 10px; border-bottom: 1px solid var(--border-color); }
-        th { color: var(--subtle-text); font-weight: 500; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--subtle-text); font-weight: 600; }
         tr:last-child td { border-bottom: none; }
+        tbody tr { transition: background-color 0.15s ease-in-out; }
+        tbody tr:hover { background-color: #28364a; }
+        
         .news-list { list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; }
-        .news-list a { color: var(--text-color); text-decoration: none; font-weight: 500; }
-        .back-link { display: block; text-align: center; margin-top: 40px; font-weight: 600; color: var(--link-color); text-decoration: none; }
+        .news-list li { padding: 12px 4px; border-bottom: 1px solid var(--border-color); }
+        .news-list li:last-child { border-bottom: none; }
+        .news-list a { color: var(--text-color); text-decoration: none; font-weight: 500; display: block; transition: color 0.2s; }
+        .news-list a:hover { color: var(--link-color); }
+
+        /* Update Plotly dark theme */
+        .js-plotly-plot .plotly, .js-plotly-plot .plotly-graph-div {
+            background: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
     </style>
 </head>
 <body>
+    <header class="header">
+        <div class="logo">Bulls N Bears</div>
+        <a href="/" class="back-link">New Analysis</a>
+    </header>
+
     <div class="container">
         {% if error %}
             <div class="error-card">
@@ -44,42 +135,57 @@
         {% else %}
             <div class="results-grid">
                 <div class="card chart-card">
+                    <!-- Plotly will be injected here. We'll update its theme from app.py -->
                     {{ plot_html | safe }}
                 </div>
                 
                 <div class="card comparison-card">
-                    <h3>Prediction vs. Actual Prices (7-Day Forecast)</h3>
+                    <h3>
+                        {% if mode == 'Backtest' %}
+                            Prediction vs. Actual (7-Day Backtest)
+                        {% else %}
+                            7-Day Price Forecast
+                        {% endif %}
+                    </h3>
                     <table>
-                        <tr>
-                            <th>Date</th>
-                            <th>Actual Price</th>
-                            <th>Predicted Price</th>
-                        </tr>
-                        {% for row in comparison_data %}
-                        <tr>
-                            <td>{{ row.Date }}</td>
-                            <td>${{ "%.2f"|format(row['Actual Price']) }}</td>
-                            <td>${{ "%.2f"|format(row['Predicted Price']) }}</td>
-                        </tr>
-                        {% endfor %}
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                {% if mode == 'Backtest' %}<th>Actual Price</th>{% endif %}
+                                <th>Predicted Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in comparison_data %}
+                            <tr>
+                                <td>{{ row.Date }}</td>
+                                {% if mode == 'Backtest' %}
+                                    <td><strong>₹{{ "%.2f"|format(row['Actual Price']) }}</strong></td>
+                                {% endif %}
+                                <td>₹{{ "%.2f"|format(row['Predicted Price']) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
                     </table>
                 </div>
 
                 <div class="side-panel">
+                    {% if mode == 'Backtest' %}
                     <div class="card">
                         <h3>Model Accuracy</h3>
                         <div class="accuracy-metrics">
                             <div class="metric">
                                 <h4>MAPE</h4>
-                                <p>{{ mape }}</p>
+                                <p class="mape">{{ mape }}</p>
                             </div>
                             <div class="metric">
                                 <h4>MAE</h4>
-                                <p>{{ mae }}</p>
+                                <p>₹{{ mae }}</p>
                             </div>
                         </div>
-                         <p style="font-size:12px; color:#7f8c9b; text-align:center; margin-top:10px;">Lower values are better. MAPE is Mean Absolute Percentage Error.</p>
+                         <p style="font-size:12px; color:#94a3b8; text-align:center; margin-top:16px;">Lower values are better. MAE is the Mean Absolute Error in Rupees.</p>
                     </div>
+                    {% endif %}
 
                     <div class="card">
                         <h3>Latest News for {{ ticker | upper }}</h3>
@@ -95,7 +201,6 @@
                     </div>
                 </div>
             </div>
-            <a href="/" class="back-link">Run Another Analysis</a>
         {% endif %}
     </div>
 </body>
