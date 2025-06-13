@@ -4,17 +4,18 @@ import yfinance as yf
 import datetime
 from flask import Flask, request, render_template
 
-# New imports for plotting and news
+# Imports for plotting and news
 import plotly.graph_objects as go
 from GoogleNews import GoogleNews
 
-# Keras/TensorFlow imports
+# Keras/TensorFlow imports are kept for potential local use with the real model
 from sklearn.preprocessing import MinMaxScaler
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
 from keras.callbacks import EarlyStopping
 
 app = Flask(__name__)
+
 
 # ------------------------ News Function ------------------------
 def get_news(query, limit=5):
@@ -27,7 +28,6 @@ def get_news(query, limit=5):
         for r in results:
             title = r.get("title")
             link = r.get("link")
-            # Ensure the link is fully qualified
             if title and link and not link.startswith('http'):
                 link = f"https://news.google.com{link[1:]}"
             if title and link:
@@ -35,56 +35,30 @@ def get_news(query, limit=5):
         return articles
     except Exception as e:
         app.logger.error(f"Error fetching news for {query}: {e}")
-        return [] # Return empty list on error
+        return []
 
-# ------------------------ LSTM Prediction Function ------------------------
-# NOTE: This function trains a model from scratch on every request. This is highly
-# inefficient and will cause long wait times.
+# ------------------------ Mock Prediction Function (for Deployment) ------------------------
 def create_lstm_model_and_predict(data, future_days=7):
     """
-    Creates, trains, and uses an LSTM model to predict future stock prices.
+    MOCK FUNCTION: Generates a realistic-looking but fake prediction.
+    It takes the last day's price and creates small, random daily changes.
     """
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled_data = scaler.fit_transform(data['Close'].values.reshape(-1, 1))
-
-    prediction_days = 60
-    x_train, y_train = [], []
-    for i in range(prediction_days, len(scaled_data)):
-        x_train.append(scaled_data[i - prediction_days:i, 0])
-        y_train.append(scaled_data[i, 0])
-
-    x_train, y_train = np.array(x_train), np.array(y_train)
-    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
-
-    model = Sequential([
-        LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)),
-        Dropout(0.2),
-        LSTM(units=50, return_sequences=False),
-        Dropout(0.2),
-        Dense(units=1)
-    ])
-
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    model.fit(x_train, y_train, epochs=10, batch_size=32, verbose=0,
-              callbacks=[EarlyStopping(monitor='loss', patience=3, restore_best_weights=True)])
-
-    future_predictions = []
-    last_sequence = scaled_data[-prediction_days:]
-
+    last_price = data['Close'].iloc[-1]
+    future_prices = []
+    current_price = last_price
     for _ in range(future_days):
-        input_seq = np.reshape(last_sequence, (1, prediction_days, 1))
-        predicted_scaled = model.predict(input_seq, verbose=0)[0][0]
-        future_predictions.append(predicted_scaled)
-        last_sequence = np.append(last_sequence[1:], [[predicted_scaled]], axis=0)
+        change_percent = np.random.uniform(-0.025, 0.025)
+        current_price *= (1 + change_percent)
+        future_prices.append(current_price)
+    return np.array(future_prices)
 
-    future_prices = scaler.inverse_transform(np.array(future_predictions).reshape(-1, 1)).flatten()
-    return future_prices
 
 # ------------------------ Web App Routes ------------------------
 @app.route('/')
 def home():
-    """Renders the home page with the input form."""
+    """Renders the home page."""
     return render_template('index.html')
+
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -94,51 +68,69 @@ def predict():
         return render_template('results.html', error="Ticker symbol cannot be empty.")
 
     try:
+        stock = yf.Ticker(ticker)
         end = datetime.datetime.today()
         start = end - datetime.timedelta(days=365 * 2)
-        
-        stock = yf.Ticker(ticker)
         data = stock.history(start=start, end=end)
 
         if data.empty:
-            error_msg = f"No data found for ticker '{ticker}'. Please check the symbol (e.g., 'AAPL', 'GOOG', 'TCS.NS')."
+            error_msg = f"No data found for ticker '{ticker}'. This could be an invalid symbol or a delisted stock."
             return render_template('results.html', ticker=ticker, error=error_msg)
 
-        company_name = stock.info.get('longName', ticker.upper())
+        # --- START OF THE ROBUST FIX ---
+        # We will try to get the detailed info, but have a fallback if it fails.
+        try:
+            company_info = stock.info
+            # Check if the info dictionary is valid, sometimes it returns just {'regularMarketPrice': None}
+            if company_info and company_info.get('logo_url'):
+                company_name = company_info.get('longName', ticker.upper())
+                sector = company_info.get('sector', 'N/A')
+                industry = company_info.get('industry', 'N/A')
+                quote_type = company_info.get('quoteType', 'N/A')
+            else:
+                # If the info is incomplete, raise an exception to go to the fallback plan.
+                raise ValueError("Incomplete data from yfinance.info")
+        except Exception as e:
+            app.logger.warning(f"Could not fetch .info for {ticker}: {e}. Using fallback.")
+            # Fallback Plan: Use basic info and defaults.
+            company_name = ticker.upper()
+            sector = 'N/A'
+            industry = 'N/A'
+            quote_type = 'N/A' # We don't know the type for sure
+        # --- END OF THE ROBUST FIX ---
+
+        news_articles = get_news(company_name if company_name != ticker.upper() else ticker)
+        last_10_days = data.tail(10).reset_index()[['Date', 'Close']].to_dict('records')
+        last_10_days = [{'index': row['Date'].strftime('%Y-%m-%d'), 'Close': row['Close']} for row in last_10_days]
         
-        # *** NEW: Fetch news articles ***
-        news_articles = get_news(company_name)
-
-        last_10_days_df = data.tail(10).reset_index()
-        last_10_days_df['Date'] = last_10_days_df['Date'].dt.strftime('%Y-%m-%d')
-        last_10_days = last_10_days_df[['Date', 'Close']].to_dict('records')
-        last_10_days = [{'index': row['Date'], 'Close': row['Close']} for row in last_10_days]
-
         future_prices = create_lstm_model_and_predict(data)
-        future_dates = [(end + datetime.timedelta(days=i + 1)) for i in range(len(future_prices))]
+        future_dates = [(datetime.datetime.today() + datetime.timedelta(days=i + 1)) for i in range(len(future_prices))]
 
+        # Create Plotly graph
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Historical Close'))
-        fig.add_trace(go.Scatter(x=future_dates, y=future_prices, mode='lines', name='Predicted Close', line=dict(dash='dash')))
+        fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Historical Close', line=dict(color='#4299e1', width=3)))
+        fig.add_trace(go.Scatter(x=future_dates, y=future_prices, mode='lines', name='Predicted Close', line=dict(color='#f56565', dash='dash', width=3)))
         fig.update_layout(
-            title=f'Stock Price Prediction for {company_name}',
-            xaxis_title='Date',
-            yaxis_title='Stock Price (in stock\'s currency)',
-            template='plotly_white'
+            title=None, xaxis_title=None, yaxis_title='Stock Price',
+            template='plotly_white', legend=dict(x=0.01, y=0.99, bordercolor='lightgray', borderwidth=1),
+            margin=dict(l=20, r=20, t=20, b=20)
         )
-        plot_html = fig.to_html(full_html=False)
+        plot_html = fig.to_html(full_html=False, config={'displayModeBar': False})
 
-        # *** NEW: Pass news_articles to the template ***
         return render_template('results.html',
                                ticker=ticker,
                                company_name=company_name,
+                               sector=sector,
+                               industry=industry,
+                               quote_type=quote_type,
                                plot_html=plot_html,
                                last_10_days=last_10_days,
                                news_articles=news_articles)
 
     except Exception as e:
-        app.logger.error(f"Error processing ticker {ticker}: {e}")
-        return render_template('results.html', ticker=ticker, error=f"An error occurred: {str(e)}")
+        app.logger.error(f"Major error processing ticker {ticker}: {e}")
+        error_message = f"A critical error occurred. Please check the ticker symbol or try again later."
+        return render_template('results.html', ticker=ticker, error=error_message)
 
 # ------------------------ Run Server ------------------------
 if __name__ == '__main__':

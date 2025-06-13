@@ -1,51 +1,183 @@
-<!-- templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Stock Predictor</title>
+    <title>Bulls N Bears - AI Stock Forecast</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 2em; text-align: center; background-color: #f4f7f6; }
-        h1 { color: #333; }
-        .form-container {
-            margin-top: 2em;
-            padding: 2em;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            display: inline-block;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        :root {
+            --bg-color: #eaf0f7;
+            --text-color: #2c3e50;
+            --card-bg: #ffffff;
+            --border-color: #dbe1e8;
         }
-        input[type="text"] {
-            padding: 12px;
-            width: 250px;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        .main-content {
+            text-align: center;
+            padding: 20px;
+        }
+        .logo {
+            font-family: 'Poppins', sans-serif;
+            font-size: 64px;
+            font-weight: 600;
+            color: var(--text-color);
+            margin: 0 0 32px 0;
+        }
+        .search-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        #ticker {
+            width: 100%;
+            height: 60px;
+            padding: 0 70px 0 30px;
+            box-sizing: border-box;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
+            font-family: 'Inter', sans-serif;
             font-size: 16px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease-in-out;
         }
-        button {
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
+        #ticker:focus {
+            outline: none;
+            border-color: #88a4c4;
+            box-shadow: 0 0 0 4px rgba(136, 164, 196, 0.3);
+        }
+        .search-button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background-color: #f0f3f6;
             border: none;
-            border-radius: 4px;
+            border-radius: 50%;
             cursor: pointer;
-            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.2s;
         }
-        button:hover {
-            background-color: #0056b3;
+        .search-button:hover { background-color: #e1e8f0; }
+        .search-icon { stroke: #5c6a79; }
+        .subtitle {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #7f8c9b;
+        }
+        .bg-graph {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            z-index: 0;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        /* Loading Screen */
+        .loading-screen {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: var(--bg-color);
+            z-index: 999;
+        }
+        .loader {
+            width: 250px;
+            height: 8px;
+            background-color: #dbe1e8;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        .loader::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 40%;
+            background-color: #2c3e50;
+            border-radius: 4px;
+            animation: loading-animation 1.5s infinite;
+        }
+        .loading-text {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #7f8c9b;
+            font-weight: 500;
+        }
+        @keyframes loading-animation {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(250%); }
         }
     </style>
 </head>
 <body>
-    <h1>Stock Price Predictor</h1>
-    <div class="form-container">
-        <form action="/predict" method="post">
-            <label for="ticker">Enter Stock Ticker:</label><br><br>
-            <input type="text" id="ticker" name="ticker" placeholder="e.g., AAPL, GOOG, TSLA" required>
-            <button type="submit">Predict</button>
-        </form>
+
+    <div class="container" id="main-content">
+        <div class="main-content">
+            <h1 class="logo">Bulls N Bears</h1>
+            <form action="/predict" method="post" id="predict-form">
+                <div class="search-container">
+                    <input type="text" id="ticker" name="ticker" placeholder="eg. AAPL, GOOGL, MSFT" required>
+                    <button type="submit" class="search-button" aria-label="Predict">
+                        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M21 21L16.65 16.65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+            <p class="subtitle">Enter a stock to get AI-powered price forecast and the latest market news</p>
+        </div>
     </div>
+
+    <div class="loading-screen" id="loading-screen">
+        <div class="loader"></div>
+        <p class="loading-text">Fetching Data...</p>
+    </div>
+
+    <svg class="bg-graph" viewBox="0 0 1440 120" preserveAspectRatio="none">
+        <path d="M0,50 C120,80 240,30 360,60 C480,90 600,40 720,70 C840,100 960,50 1080,80 C1200,110 1320,60 1440,90 L1440,120 L0,120 Z" fill="#ffffff" fill-opacity="0.5"></path>
+    </svg>
+
+    <script>
+        document.getElementById('predict-form').addEventListener('submit', function() {
+            // Hide main content
+            document.getElementById('main-content').style.display = 'none';
+            // Show loading screen
+            document.getElementById('loading-screen').style.display = 'flex';
+        });
+    </script>
+
 </body>
 </html>

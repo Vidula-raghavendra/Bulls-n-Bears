@@ -1,91 +1,207 @@
-<!-- templates/results.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Prediction Results</title>
+    <title>Results - Bulls N Bears</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 2em; background-color: #f4f7f6;}
-        h1, h2, h3 { color: #333; text-align: center; }
+        :root {
+            --bg-color: #eaf0f7;
+            --text-color: #2c3e50;
+            --card-bg: #ffffff;
+            --border-color: #dbe1e8;
+            --heading-color: #1a202c;
+            --subtle-text: #7f8c9b;
+            --link-color: #4299e1;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
         .container {
-            max-width: 900px;
-            margin: auto;
-            background-color: #fff;
-            padding: 1.5em;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 40px;
         }
-        .error { color: #d9534f; font-weight: bold; border: 1px solid #d9534f; padding: 1em; border-radius: 4px; background-color: #f2dede; }
-        .data-section {
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-start;
-            margin-top: 2em;
-            flex-wrap: wrap;
+
+        /* --- Error Card Styling (No changes needed here) --- */
+        .error-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 60px 40px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
         }
-        table { border-collapse: collapse; width: 350px; margin: 1em; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .news-list { list-style-type: none; padding-left: 0; width: 400px; margin: 1em; }
-        .news-list li { margin-bottom: 1em; border-bottom: 1px solid #eee; padding-bottom: 1em;}
+        .error-card h2 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin: 0 0 12px 0;
+        }
+        .error-card p {
+            font-size: 16px;
+            color: var(--subtle-text);
+            margin: 0 0 32px 0;
+        }
+        .error-card a {
+            font-weight: 600;
+            color: var(--link-color);
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .error-card a:hover {
+            text-decoration: underline;
+        }
+        
+        /* --- Results Grid Styling (No changes needed here) --- */
+        .result-header { margin-bottom: 30px; }
+        .result-header h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 42px;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin: 0;
+        }
+        .results-grid {
+            display: grid;
+            gap: 24px;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: auto auto;
+            grid-template-areas:
+                "chart chart side1"
+                "chart chart side2"
+                "chart chart side3";
+        }
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        .card h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 16px 0;
+            color: var(--heading-color);
+        }
+        .chart-card { grid-area: chart; }
+        .sector-card { grid-area: side1; }
+        .prices-card { grid-area: side2; }
+        .news-card { grid-area: side3; }
+        .sector-info p { margin: 4px 0; font-size: 14px; }
+        .sector-info strong { color: var(--subtle-text); font-weight: 500; margin-right: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { text-align: left; padding: 10px 4px; border-bottom: 1px solid var(--border-color); }
+        th { color: var(--subtle-text); font-weight: 500; }
+        tr:last-child td { border-bottom: none; }
+        .news-list { list-style: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; }
+        .news-list li { padding: 10px 0; border-bottom: 1px solid var(--border-color); }
         .news-list li:last-child { border-bottom: none; }
-        .back-link { display: block; text-align: center; margin-top: 2em; }
-        a { color: #007bff; text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        .news-list a { color: var(--text-color); text-decoration: none; font-weight: 500; font-size: 14px; transition: color 0.2s; }
+        .news-list a:hover { color: var(--link-color); }
+        .back-link { display: block; text-align: center; margin-top: 40px; font-weight: 600; color: var(--link-color); text-decoration: none; }
+
+        @media (max-width: 1200px) {
+            .results-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-areas: "chart chart" "side1 side2" "side3 side3";
+            }
+        }
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+                grid-template-areas: "chart" "side1" "side2" "side3";
+            }
+            .result-header h1 { font-size: 32px; }
+            .container { padding: 0 20px; margin: 20px auto; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Prediction Results for {{ ticker | upper }}</h1>
-
+        
+        <!-- *** START OF THE CRUCIAL FIX *** -->
+        <!-- This is a clean, top-level if/else statement. -->
+        <!-- It checks ONLY if the 'error' variable was passed from Flask. -->
+        
         {% if error %}
-            <p class="error">Error: {{ error }}</p>
-        {% else %}
-            <h2>{{ company_name }}</h2>
-
-            <div class="plot-container">
-                {{ plot_html | safe }}
+            
+            <!-- If an error exists, and ONLY if an error exists, show this block. -->
+            <div class="error-card">
+                <h2>An Error Occurred</h2>
+                <p>{{ error }}</p>
+                <a href="/">Try Again</a>
             </div>
 
-            <div class="data-section">
-                <div>
-                    <h3>Last 10 Days (Actual Closing Prices)</h3>
+        {% else %}
+
+            <!-- If there is NO error, show the entire results block. -->
+            <div class="result-header">
+                <h1>Result For {{ company_name }} ({{ ticker | upper }})</h1>
+            </div>
+
+            <div class="results-grid">
+                <div class="card chart-card">
+                    <h3>Price History & Prediction</h3>
+                    <div class="plot-container">{{ plot_html | safe }}</div>
+                </div>
+
+                <div class="card sector-card">
+                    <h3>Collection / Sector</h3>
+                    {% if sector and sector != 'N/A' %}
+                        <div class="sector-info">
+                            <p><strong>Sector:</strong> {{ sector }}</p>
+                            <p><strong>Industry:</strong> {{ industry }}</p>
+                        </div>
+                    {% else %}
+                        <div class="sector-info">
+                            <p><strong>Asset Type:</strong> {{ quote_type }}</p>
+                            <p>This asset may be a collection or index and does not belong to a single sector.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="card prices-card">
+                    <h3>Last 10 Closing Prices</h3>
                     <table>
-                        <tr>
-                            <th>Date</th>
-                            <th>Close Price</th>
-                        </tr>
                         {% for row in last_10_days %}
                             <tr>
                                 <td>{{ row['index'] }}</td>
-                                <td>{{ "%.2f"|format(row['Close']) }}</td>
+                                <td><strong>{{ "%.2f"|format(row['Close']) }}</strong></td>
                             </tr>
                         {% endfor %}
                     </table>
                 </div>
 
-                <!-- NEW: News Articles Section -->
-                {% if news_articles %}
-                <div>
-                    <h3>Recent News</h3>
-                    <ul class="news-list">
-                        {% for article in news_articles %}
-                            <li>
-                                <a href="{{ article.link }}" target="_blank" rel="noopener noreferrer">
-                                    {{ article.title }}
-                                </a>
-                            </li>
-                        {% endfor %}
-                    </ul>
+                <div class="card news-card">
+                    <h3>Latest News</h3>
+                    {% if news_articles %}
+                        <ul class="news-list">
+                            {% for article in news_articles %}
+                            <li><a href="{{ article.link }}" target="_blank" rel="noopener noreferrer">{{ article.title }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p>No news found.</p>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
+            <a href="/" class="back-link">Predict Another Stock</a>
+            
         {% endif %}
+        <!-- *** END OF THE CRUCIAL FIX *** -->
 
-        <div class="back-link">
-            <a href="/">Predict Another Stock</a>
-        </div>
     </div>
 </body>
 </html>
