@@ -39,50 +39,61 @@
             color: var(--text-color);
             margin: 0 0 32px 0;
         }
-        .search-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
+        .form-container {
+            max-width: 650px;
             margin: 0 auto;
         }
-        #ticker {
+        .form-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            align-items: flex-end; /* Align items to the bottom */
+            margin-bottom: 16px;
+        }
+        .search-container, .date-container {
+            text-align: left;
+        }
+        .date-container label, .search-container label {
+            font-size: 14px;
+            color: #7f8c9b;
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        #ticker, #backtest_date {
             width: 100%;
-            height: 60px;
-            padding: 0 70px 0 30px;
+            height: 50px;
+            padding: 0 20px;
             box-sizing: border-box;
             background: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 30px;
+            border-radius: 12px;
             font-family: 'Inter', sans-serif;
             font-size: 16px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             transition: all 0.2s ease-in-out;
         }
-        #ticker:focus {
+        #ticker:focus, #backtest_date:focus {
             outline: none;
             border-color: #88a4c4;
             box-shadow: 0 0 0 4px rgba(136, 164, 196, 0.3);
         }
-        .search-button {
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 50px;
-            height: 50px;
-            background-color: #f0f3f6;
+        .submit-button {
+            width: 100%;
+            height: 52px;
+            background-color: #4299e1;
             border: none;
-            border-radius: 50%;
+            border-radius: 12px;
             cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
             transition: background-color 0.2s;
+            margin-top: 16px; /* Space above button */
         }
-        .search-button:hover { background-color: #e1e8f0; }
-        .search-icon { stroke: #5c6a79; }
+        .submit-button:hover { background-color: #3182ce; }
         .subtitle {
-            margin-top: 16px;
+            margin-top: 24px;
             font-size: 14px;
             color: #7f8c9b;
         }
@@ -96,74 +107,39 @@
             opacity: 0.5;
             pointer-events: none;
         }
-        /* Loading Screen */
-        .loading-screen {
-            display: none; /* Hidden by default */
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            width: 100vw;
-            position: fixed;
-            top: 0;
-            left: 0;
-            background-color: var(--bg-color);
-            z-index: 999;
-        }
-        .loader {
-            width: 250px;
-            height: 8px;
-            background-color: #dbe1e8;
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
-        }
-        .loader::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            width: 40%;
-            background-color: #2c3e50;
-            border-radius: 4px;
-            animation: loading-animation 1.5s infinite;
-        }
-        .loading-text {
-            margin-top: 20px;
-            font-size: 14px;
-            color: #7f8c9b;
-            font-weight: 500;
-        }
-        @keyframes loading-animation {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(250%); }
-        }
+        .loading-screen { display: none; flex-direction: column; justify-content: center; align-items: center; height: 100vh; width: 100vw; position: fixed; top: 0; left: 0; background-color: var(--bg-color); z-index: 999; }
+        .loader { width: 250px; height: 8px; background-color: #dbe1e8; border-radius: 4px; overflow: hidden; position: relative; }
+        .loader::after { content: ''; position: absolute; top: 0; left: 0; height: 100%; width: 40%; background-color: #2c3e50; border-radius: 4px; animation: loading-animation 1.5s infinite; }
+        .loading-text { margin-top: 20px; font-size: 14px; color: #7f8c9b; font-weight: 500; }
+        @keyframes loading-animation { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
     </style>
 </head>
 <body>
-
     <div class="container" id="main-content">
         <div class="main-content">
             <h1 class="logo">Bulls N Bears</h1>
-            <form action="/predict" method="post" id="predict-form">
-                <div class="search-container">
-                    <input type="text" id="ticker" name="ticker" placeholder="eg. AAPL, GOOGL, MSFT" required>
-                    <button type="submit" class="search-button" aria-label="Predict">
-                        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M11 19C15.4183 19 19 15.4183 19 11C19 6.58172 15.4183 3 11 3C6.58172 3 3 6.58172 3 11C3 15.4183 6.58172 19 11 19Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M21 21L16.65 16.65" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                </div>
-            </form>
-            <p class="subtitle">Enter a stock to get AI-powered price forecast and the latest market news</p>
+            <div class="form-container">
+                <form action="/predict" method="post" id="predict-form">
+                    <div class="form-grid">
+                        <div class="search-container">
+                            <label for="ticker">Stock Ticker</label>
+                            <input type="text" id="ticker" name="ticker" placeholder="e.g., AAPL, GOOGL, MSFT" required>
+                        </div>
+                        <div class="date-container">
+                            <label for="backtest_date">Backtest Date</label>
+                            <input type="date" id="backtest_date" name="backtest_date">
+                        </div>
+                    </div>
+                    <button type="submit" class="submit-button">Analyze Accuracy</button>
+                </form>
+            </div>
+            <p class="subtitle">Enter a stock and select a date to backtest the AI's prediction accuracy.</p>
         </div>
     </div>
-
+    
     <div class="loading-screen" id="loading-screen">
         <div class="loader"></div>
-        <p class="loading-text">Fetching Data...</p>
+        <p class="loading-text">Training Model & Analyzing Accuracy...</p>
     </div>
 
     <svg class="bg-graph" viewBox="0 0 1440 120" preserveAspectRatio="none">
@@ -171,13 +147,20 @@
     </svg>
 
     <script>
+        const datePicker = document.getElementById('backtest_date');
+        const today = new Date();
+        const maxDate = new Date(today);
+        maxDate.setDate(today.getDate() - 8); // Cannot pick a date within the last 8 days
+        const defaultDate = new Date(maxDate);
+        defaultDate.setDate(maxDate.getDate() - 7); // Default to one week before the max date
+
+        datePicker.max = maxDate.toISOString().split('T')[0];
+        datePicker.value = defaultDate.toISOString().split('T')[0];
+
         document.getElementById('predict-form').addEventListener('submit', function() {
-            // Hide main content
             document.getElementById('main-content').style.display = 'none';
-            // Show loading screen
             document.getElementById('loading-screen').style.display = 'flex';
         });
     </script>
-
 </body>
 </html>

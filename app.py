@@ -8,22 +8,54 @@ from flask import Flask, request, render_template
 import plotly.graph_objects as go
 from GoogleNews import GoogleNews
 
-# Keras/TensorFlow imports are kept for potential local use with the real model
+# Keras/TensorFlow imports
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import mean_absolute_error
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout
-from keras.callbacks import EarlyStopping
 
 app = Flask(__name__)
 
+# --- REAL LSTM MODEL TRAINING FUNCTION ---
+def create_and_train_lstm(data):
+    """
+    Creates, trains, and returns an LSTM model, along with the scaler and key parameters.
+    """
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(data['Close'].values.reshape(-1, 1))
 
-# ------------------------ News Function ------------------------
+    prediction_days = 60  # Lookback period
+
+    x_train, y_train = [], []
+    for i in range(prediction_days, len(scaled_data)):
+        x_train.append(scaled_data[i - prediction_days:i, 0])
+        y_train.append(scaled_data[i, 0])
+
+    x_train, y_train = np.array(x_train), np.array(y_train)
+    x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
+
+    # Build the LSTM Model
+    model = Sequential([
+        LSTM(units=50, return_sequences=True, input_shape=(x_train.shape[1], 1)),
+        Dropout(0.2),
+        LSTM(units=50, return_sequences=False),
+        Dropout(0.2),
+        Dense(units=1)
+    ])
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    
+    # Train the model. verbose=0 keeps the console clean during requests.
+    model.fit(x_train, y_train, epochs=10, batch_size=32, verbose=0)
+    
+    return model, scaler, scaled_data, prediction_days
+
+# --- NEWS FUNCTION ---
 def get_news(query, limit=5):
     """Fetches recent news articles for a given query."""
     try:
         googlenews = GoogleNews(lang='en', region='US')
         googlenews.search(f"{query} stock")
-        results = googlenews.result(sort=True)[:limit] # sort=True gets most recent
+        results = googlenews.result(sort=True)[:limit]
         articles = []
         for r in results:
             title = r.get("title")
@@ -37,23 +69,7 @@ def get_news(query, limit=5):
         app.logger.error(f"Error fetching news for {query}: {e}")
         return []
 
-# ------------------------ Mock Prediction Function (for Deployment) ------------------------
-def create_lstm_model_and_predict(data, future_days=7):
-    """
-    MOCK FUNCTION: Generates a realistic-looking but fake prediction.
-    It takes the last day's price and creates small, random daily changes.
-    """
-    last_price = data['Close'].iloc[-1]
-    future_prices = []
-    current_price = last_price
-    for _ in range(future_days):
-        change_percent = np.random.uniform(-0.025, 0.025)
-        current_price *= (1 + change_percent)
-        future_prices.append(current_price)
-    return np.array(future_prices)
-
-
-# ------------------------ Web App Routes ------------------------
+# --- WEB APP ROUTES ---
 @app.route('/')
 def home():
     """Renders the home page."""
@@ -62,76 +78,91 @@ def home():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    """Handles the form submission and displays prediction results."""
+    """Handles the backtesting request and displays accuracy results."""
     ticker = request.form.get('ticker')
-    if not ticker:
-        return render_template('results.html', error="Ticker symbol cannot be empty.")
+    backtest_date_str = request.form.get('backtest_date')
+
+    if not ticker or not backtest_date_str:
+        return render_template('results.html', error="Ticker and a valid backtest date are required.")
 
     try:
-        stock = yf.Ticker(ticker)
-        end = datetime.datetime.today()
-        start = end - datetime.timedelta(days=365 * 2)
-        data = stock.history(start=start, end=end)
-
-        if data.empty:
-            error_msg = f"No data found for ticker '{ticker}'. This could be an invalid symbol or a delisted stock."
-            return render_template('results.html', ticker=ticker, error=error_msg)
-
-        # --- START OF THE ROBUST FIX ---
-        # We will try to get the detailed info, but have a fallback if it fails.
-        try:
-            company_info = stock.info
-            # Check if the info dictionary is valid, sometimes it returns just {'regularMarketPrice': None}
-            if company_info and company_info.get('logo_url'):
-                company_name = company_info.get('longName', ticker.upper())
-                sector = company_info.get('sector', 'N/A')
-                industry = company_info.get('industry', 'N/A')
-                quote_type = company_info.get('quoteType', 'N/A')
-            else:
-                # If the info is incomplete, raise an exception to go to the fallback plan.
-                raise ValueError("Incomplete data from yfinance.info")
-        except Exception as e:
-            app.logger.warning(f"Could not fetch .info for {ticker}: {e}. Using fallback.")
-            # Fallback Plan: Use basic info and defaults.
-            company_name = ticker.upper()
-            sector = 'N/A'
-            industry = 'N/A'
-            quote_type = 'N/A' # We don't know the type for sure
-        # --- END OF THE ROBUST FIX ---
-
-        news_articles = get_news(company_name if company_name != ticker.upper() else ticker)
-        last_10_days = data.tail(10).reset_index()[['Date', 'Close']].to_dict('records')
-        last_10_days = [{'index': row['Date'].strftime('%Y-%m-%d'), 'Close': row['Close']} for row in last_10_days]
+        backtest_date = datetime.datetime.strptime(backtest_date_str, '%Y-%m-%d')
         
-        future_prices = create_lstm_model_and_predict(data)
-        future_dates = [(datetime.datetime.today() + datetime.timedelta(days=i + 1)) for i in range(len(future_prices))]
+        # --- 1. Data Fetching ---
+        training_end_date = backtest_date
+        training_start_date = training_end_date - datetime.timedelta(days=365*2)
+        actual_data_end_date = training_end_date + datetime.timedelta(days=12) # Fetch extra days to ensure we get 7 trading days
+        
+        stock = yf.Ticker(ticker)
+        training_data = stock.history(start=training_start_date, end=training_end_date)
+        actual_data = stock.history(start=training_end_date, end=actual_data_end_date)
 
-        # Create Plotly graph
+        if training_data.empty or len(training_data) < 60:
+            return render_template('results.html', error=f"Not enough historical data for {ticker} before {backtest_date_str}. Please choose an earlier date.")
+
+        # --- 2. Model Training and Prediction ---
+        model, scaler, scaled_data, prediction_days = create_and_train_lstm(training_data)
+        
+        last_sequence = scaled_data[-prediction_days:]
+        future_predictions_scaled = []
+        for _ in range(7):
+            input_seq = np.reshape(last_sequence, (1, prediction_days, 1))
+            predicted_scaled = model.predict(input_seq, verbose=0)[0][0]
+            future_predictions_scaled.append(predicted_scaled)
+            last_sequence = np.append(last_sequence[1:], [[predicted_scaled]], axis=0)
+        
+        predicted_prices = scaler.inverse_transform(np.array(future_predictions_scaled).reshape(-1, 1)).flatten()
+
+        # --- 3. Accuracy Calculation ---
+        actual_prices = actual_data['Close'].values[1:8] # Skip the test date, take next 7
+        
+        if len(actual_prices) < 7:
+            return render_template('results.html', error=f"Could not retrieve 7 full trading days after {backtest_date_str} (market might have been closed). Please select a different date.")
+            
+        predicted_prices = predicted_prices[:len(actual_prices)]
+
+        mae = mean_absolute_error(actual_prices, predicted_prices)
+        mape = np.mean(np.abs((actual_prices - predicted_prices) / actual_prices)) * 100
+        
+        prediction_dates = pd.to_datetime(actual_data.index[1:8])
+        comparison_data = pd.DataFrame({
+            'Date': prediction_dates.strftime('%Y-%m-%d'),
+            'Actual Price': actual_prices,
+            'Predicted Price': predicted_prices
+        }).to_dict('records')
+
+        # --- 4. Visualization ---
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data.index, y=data['Close'], mode='lines', name='Historical Close', line=dict(color='#4299e1', width=3)))
-        fig.add_trace(go.Scatter(x=future_dates, y=future_prices, mode='lines', name='Predicted Close', line=dict(color='#f56565', dash='dash', width=3)))
+        fig.add_trace(go.Scatter(x=training_data.index, y=training_data['Close'], mode='lines', name='Historical Price', line=dict(color='#4299e1')))
+        fig.add_trace(go.Scatter(x=prediction_dates, y=actual_prices, mode='lines', name='Actual Price', line=dict(color='#2ecc71', width=3)))
+        fig.add_trace(go.Scatter(x=prediction_dates, y=predicted_prices, mode='lines', name='Predicted Price', line=dict(color='#e74c3c', dash='dash', width=3)))
+        
         fig.update_layout(
-            title=None, xaxis_title=None, yaxis_title='Stock Price',
-            template='plotly_white', legend=dict(x=0.01, y=0.99, bordercolor='lightgray', borderwidth=1),
-            margin=dict(l=20, r=20, t=20, b=20)
+            title=f"Backtest Results for {ticker} from {backtest_date_str}",
+            xaxis_title=None, yaxis_title='Stock Price', template='plotly_white',
+            legend=dict(x=0.01, y=0.99, bordercolor='lightgray', borderwidth=1),
+            margin=dict(l=20, r=20, t=40, b=20)
         )
         plot_html = fig.to_html(full_html=False, config={'displayModeBar': False})
+
+        # --- 5. Other Info ---
+        company_info = stock.info
+        company_name = company_info.get('longName', ticker.upper())
+        news_articles = get_news(company_name)
 
         return render_template('results.html',
                                ticker=ticker,
                                company_name=company_name,
-                               sector=sector,
-                               industry=industry,
-                               quote_type=quote_type,
                                plot_html=plot_html,
-                               last_10_days=last_10_days,
+                               mae=f"${mae:.2f}",
+                               mape=f"{mape:.2f}%",
+                               comparison_data=comparison_data,
                                news_articles=news_articles)
 
     except Exception as e:
-        app.logger.error(f"Major error processing ticker {ticker}: {e}")
-        error_message = f"A critical error occurred. Please check the ticker symbol or try again later."
-        return render_template('results.html', ticker=ticker, error=error_message)
+        app.logger.error(f"Major error processing request: {e}")
+        return render_template('results.html', error="An unexpected error occurred. Please check your inputs or try again later.")
 
-# ------------------------ Run Server ------------------------
+# ------------------------ RUN SERVER ------------------------
 if __name__ == '__main__':
     app.run(debug=True)
