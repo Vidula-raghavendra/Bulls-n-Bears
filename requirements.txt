@@ -1,11 +1,13 @@
-flask
+tensorflow-cpu==2.13.0
+keras==2.13.1
 numpy
 pandas
 yfinance
+flask
 plotly
 GoogleNews
 joblib
-tensorflow-cpu==2.13.0
-gunicorn
 scikit-learn
+gunicorn
+
 
