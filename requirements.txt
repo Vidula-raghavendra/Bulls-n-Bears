@@ -11,3 +11,4 @@ selenium
 webdriver-manager
 beautifulsoup4
 gunicorn 
+GoogleNews
